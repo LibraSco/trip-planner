@@ -1,0 +1,21 @@
+# LangChain框架(替代HelloAgents SimpleAgent)
+langchain>=1.3.0,<2.0
+langchain-openai>=1.6.0,<2.0
+langchain-mcp-adapters>=0.3.0,<1.0
+# MCP协议客户端(langchain-mcp-adapters依赖,显式声明)
+mcp>=1.30.0,<2.0
+
+# FastAPI和相关依赖
+fastapi>=0.139.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# 环境变量管理
+python-dotenv>=1.0.0
+
+# Unsplash图片服务(requests)
+requests>=2.31.0
+
+# 运行uvx启动amap-mcp-server所需的uv工具
+uv>=0.8.0
