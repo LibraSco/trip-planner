@@ -1,109 +1,183 @@
-# trip-planner
+# LangChain 智能旅行助手
 
-## 📝 项目简介
+基于 **LangChain + MCP + FastAPI** 的多智能体旅行规划助手，支持真实景点搜索、天气查询、酒店推荐和行程生成。本项目由 HelloAgents `SimpleAgent` 版本迁移而来，核心架构已改为 LangChain Agent。
 
-本项目是一款智能旅行助手，支持根据偏好自动生成行程、地图可视化路线、实时预算计算与编辑，并可导出为 PDF 或图片。
+## ✨ 功能特点
 
-An intelligent travel assistant that generates personalized itineraries, visualizes routes on maps, calculates real-time budgets, supports itinerary editing, and allows exporting to PDF or images.
+- 🤖 **LangChain 多智能体规划**: 景点 Agent、天气 Agent、酒店 Agent、规划 Agent 四步协作生成详细行程
+- 🗺️ **MCP 接入高德地图**: 通过 `langchain-mcp-adapters` 调用 `amap-mcp-server` 的 16 个工具
+- 🧠 **原生工具调用**: LangChain Agent 自动选择并调用 `maps_text_search` / `maps_weather` 等工具
+- 🎨 **完整前后端**: Vue3 + TypeScript + Vite 前端，FastAPI 后端
+- 📱 **完整行程要素**: 每日景点、交通、住宿、三餐、天气与预算建议
 
-## 🎯解决痛点
-传统的旅行规划方式有几个痛点。
-- 首先是**信息分散**。景点信息在旅游网站上，天气信息在天气网站上，酒店信息在预订网站上，你需要在多个网站之间切换，手动整合这些信息。
-- 其次是**缺少个性化**。大部分攻略都是通用的，不考虑你的个人偏好、预算限制、出行时间等因素。
-- 最后是**难以调整**。当你想修改行程时，可能需要重新规划整个行程，因为景点的顺序、时间安排、预算都是相互关联的。
+## 🏗️ 技术栈
 
-本项目解决了这些痛点，你只需要告诉系统"我想去北京玩 3 天，喜欢历史文化，预算中等"，系统就能自动为你生成一个完整的行程计划，包括每天去哪些景点、在哪里吃饭、住哪个酒店、需要多少预算。而且这个计划是可以调整的，你可以删除不喜欢的景点，调整游览顺序，系统会自动更新地图和预算。
+### 后端
+- **智能体框架**: LangChain（`langchain.agents.create_agent`）
+- **LLM**: `langchain-openai ChatOpenAI`，兼容 OpenAI / DeepSeek 等 OpenAI 协议接口
+- **MCP**: `langchain-mcp-adapters` + `amap-mcp-server`
+- **API**: FastAPI / uvicorn / Pydantic v2
 
-## ✨ 核心功能
-本项目包含以下核心功能：
-- （1）智能行程规划：用户输入目的地、日期、偏好等信息，系统自动生成包含景点、餐饮、酒店的完整行程计划。
+### 前端
+- **框架**: Vue 3 + TypeScript
+- **构建工具**: Vite
+- **UI 组件库**: Ant Design Vue
+- **地图服务**: 高德地图 JavaScript API
+- **HTTP 客户端**: Axios
 
-- （2）地图可视化：在地图上标注景点位置、绘制游览路线，让行程一目了然。
+## 🗂️ 后端架构
 
-- （3）预算计算：自动计算门票、酒店、餐饮、交通费用，显示预算明细。
-
-- （4）行程编辑：支持添加、删除、调整景点，实时更新地图。
-
-- （5）导出功能：支持导出为 PDF 或图片，方便保存和分享。
-## 🛠️ 技术栈
-- （1）**前端层 (Vue3+TypeScript)**：负责用户交互和数据展示，包括表单输入、结果展示、地图可视化。
-
-- （2）**后端层 (FastAPI)**：负责 API 路由、数据验证、业务逻辑。
-
-- （3）**智能体层 (HelloAgents)**：负责任务分解、工具调用、结果整合。包含 4 个专门的 Agent。
-
-- （4）**外部服务层**：提供数据和能力，包括高德地图 API、Unsplash API、LLM API。
-
-数据流转过程如下：用户在前端填写表单 → 后端验证数据 → 调用智能体系统 → 智能体依次调用景点搜索、天气查询、酒店推荐、行程规划 Agent → 每个 Agent 通过 MCP 协议调用外部 API → 整合结果返回前端 → 前端渲染展示。
-## 📑系统架构
-项目的结构参考如下，提供便于定位源码：
 ```
-helloagents-trip-planner/
-├── backend/                    # 后端代码
-│   ├── app/
-│   │   ├── agents/            # 智能体实现
-│   │   ├── api/               # API路由
-│   │   ├── models/            # 数据模型
-│   │   ├── services/          # 服务层
-│   │   └── config.py          # 配置文件
-│   └── requirements.txt       # Python依赖
-│
-└── frontend/                   # 前端代码
-    ├── src/
-    │   ├── views/             # 页面组件
-    │   ├── services/          # API服务
-    │   ├── types/             # 类型定义
-    │   └── router/            # 路由配置
-    └── package.json           # npm依赖
+FastAPI 路由
+├── trip.py  ──────>  MultiAgentTripPlanner.plan_trip()
+├── map.py   ──────>  AmapService（POI / 天气 / 路线 / 地理编码）
+└── poi.py   ──────>  AmapService / UnsplashService（详情 / 搜索 / 图片）
+
+Agent 层
+  MultiAgentTripPlanner
+   ├── attraction_agent  景点搜索（共享高德 MCP 工具）
+   ├── weather_agent     天气查询（共享高德 MCP 工具）
+   ├── hotel_agent       酒店推荐（共享高德 MCP 工具）
+   └── planner_agent     行程规划（无工具，只聚合上游结果）
+
+服务层
+  llm_service    ChatOpenAI 单例
+  amap_service   MultiServerMCPClient ──> uvx amap-mcp-server ──> 16 个 BaseTool
+  unsplash_service     景点图片
 ```
+
+### 规划流程
+
+1. `await get_amap_tools()` 按需异步加载 MCP 工具（单例缓存）
+2. 用 `create_agent(model, tools, system_prompt)` 创建四个 Agent
+3. 依次执行：
+   - 景点 Agent：根据城市与偏好搜索真实景点
+   - 天气 Agent：查询目的城市天气
+   - 酒店 Agent：按住宿偏好搜索酒店
+   - 规划 Agent：整合前三步结果，输出完整 `TripPlan` JSON
+4. `_parse_response` 解析 JSON；失败时自动降级为 `_create_fallback_plan`
+
+改造后的关键差异：
+- `SimpleAgent` → `langchain.agents.create_agent`，返回可 `invoke / ainvoke` 的 Agent
+- `HelloAgentsLLM` → `ChatOpenAI`
+- `MCPTool` → `MultiServerMCPClient.get_tools()` 返回的 `BaseTool` 列表
+- 工具调用格式 `[TOOL_CALL:...]` → LangChain 原生 tool calling
+- `plan_trip()` 为 `async def`，全部 Agent 调用使用 `await agent.ainvoke(...)`
+
+## 📁 项目结构
+
+```
+backend/
+├── app/
+│   ├── agents/
+│   │   └── trip_planner_agent.py   # 多智能体规划核心
+│   ├── api/
+│   │   ├── main.py                 # FastAPI 入口
+│   │   └── routes/
+│   │       ├── trip.py             # 旅行规划接口
+│   │       ├── map.py              # 高德地图服务接口
+│   │       └── poi.py              # POI 与图片接口
+│   ├── services/
+│   │   ├── amap_service.py         # MCP 客户端 + AmapService
+│   │   ├── llm_service.py          # ChatOpenAI 单例
+│   │   └── unsplash_service.py     # 图片搜索
+│   ├── models/
+│   │   └── schemas.py              # Pydantic 模型
+│   └── config.py                   # 配置加载
+├── requirements.txt
+├── .env.example
+└── run.py
+```
+
 ## 🚀 快速开始
 
-环境要求：
-- Python 3.10 或更高版本
-- Node.js 16.0 或更高版本
-- npm 8.0 或更高版本
-- 
-**获取 API 密钥：**
-你需要准备以下 API 密钥：
-- LLM 的 API(OpenAI、DeepSeek 等)
-- 高德地图 Web 服务 Key：访问 https://console.amap.com/ 注册并创建应用
-- Unsplash Access Key：访问 https://unsplash.com/developers 注册并创建应用
-**将所有 API 密钥放入.env文件。**
+### 后端
 
-**启动后端**
+1. 进入后端目录并创建虚拟环境：
+
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate        # Windows
 ```
-# 1. 进入后端目录
-cd 后端目录
 
-# 2. 安装依赖
+2. 安装依赖：
+
+```bash
 pip install -r requirements.txt
-
-# 3. 配置环境变量
-cp .env.example .env
-# 编辑.env文件，填入你的API密钥
-
-# 4. 启动后端服务
-uvicorn app.api.main:app --reload
-# 或者
-python run.py
 ```
-成功启动后，访问 http://localhost:8000/docs 可以看到 API 文档。
 
-**启动前端**
+3. 配置环境变量：
+
+```bash
+copy .env.example .env       # Windows
 ```
-# 1. 进入前端目录
-cd 前端目录
 
-# 2. 安装依赖
+修改 `.env`，至少配置：
+
+| 变量 | 说明 | 示例 |
+| --- | --- | --- |
+| `LLM_MODEL_ID` | 使用的模型名 | `Deepseek-v4-flash` / `gpt-4o` |
+| `LLM_API_KEY` | LLM API Key | `sk-xxx` |
+| `LLM_BASE_URL` | OpenAI 兼容服务地址，**不要以 `/chat/completions` 结尾** | `https://api.deepseek.com/v1` |
+| `LLM_TIMEOUT` | 超时秒数 | `60` |
+| `AMAP_API_KEY` | 高德 Web 服务 Key | `xxx` |
+| `CORS_ORIGINS` | 允许的前端地址 | `http://localhost:5173` |
+
+4. 启动后端：
+
+```bash
+uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+启动后访问 `http://localhost:8000/docs` 查看接口文档；`.env` 固定读取 `backend/.env`，不依赖启动目录。
+
+### 前端（可选）
+
+```bash
+cd frontend
 npm install
-
-# 3. 启动前端服务
 npm run dev
 ```
-成功启动后，访问 http://localhost:5173 即可使用应用。
 
-## 📄 许可证
+访问 `http://localhost:5173`。
 
-MIT License
+## 📄 API 文档
 
+启动后访问 `http://localhost:8000/docs`（Swagger）或 `/redoc`，主要端点：
 
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/trip/health` | 旅行规划健康检查（MCP 工具数量） |
+| POST | `/api/trip/plan` | 生成旅行计划 |
+| GET | `/api/map/poi?keywords=故宫&city=北京` | POI 搜索 |
+| GET | `/api/map/weather?city=北京` | 天气查询 |
+| POST | `/api/map/route` | 路线规划 |
+| GET | `/api/poi/detail/{poi_id}` | POI 详情 |
+| GET | `/api/poi/search?keywords=...&city=...` | POI 搜索 |
+| GET | `/api/poi/photo?name=故宫` | 景点图片 |
+
+## 🔧 常见问题
+
+**LLM 请求返回 404 `Not Found`**
+
+检查 `LLM_BASE_URL` 是否误填了完整地址（如 `.../v1/chat/completions`）。`ChatOpenAI` 会自动追加 `/chat/completions`，所以只需配置到根地址，例如 `https://chatapi.weixin.qq.com/openai/v1`。
+
+**找不到 `uvx` 或 `amap-mcp-server`？**
+
+先确认 `python -m pip show uv` 或 `uv --version` 可用，并确保 `uvx` 在 PATH 中。
+
+**Agent 没有真实数据、返回“北京景点1”？**
+
+说明整个链路兜底了。先确认 LLM API Key 与模型名正确，再逐层验证 `/api/map/poi`、`/api/map/weather` 可独立调用。
+
+## 🙏 致谢
+
+- [LangChain](https://github.com/langchain-ai/langchain)
+- [langchain-mcp-adapters](https://github.com/langchain-ai/langchain-mcp-adapters)
+- [amap-mcp-server](https://github.com/sugarforever/amap-mcp-server)
+- [高德地图开放平台](https://lbs.amap.com/)
+
+---
+
+**项目前身**: HelloAgents 智能旅行助手（基于 `SimpleAgent`），现已迁移为 LangChain 架构。
